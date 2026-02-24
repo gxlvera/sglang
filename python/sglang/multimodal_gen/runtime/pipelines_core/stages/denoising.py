@@ -1122,11 +1122,6 @@ class DenoisingStage(PipelineStage):
                 "average time per step: %.4f seconds",
                 (denoising_end_time - denoising_start_time) / len(timesteps),
             )
-        _dump_final_latents_tensor(
-            request_id=getattr(batch, "request_id", None),
-            backend="sglang",
-            tensor=latents,
-        )
         self._post_denoising_loop(
             batch=batch,
             latents=latents,
