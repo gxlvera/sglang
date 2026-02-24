@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Stable Diffusion 3 pipeline configuration."""
 
-import os
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -103,49 +102,11 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         configs[2].update_model_arch({"_class_name": "T5EncoderModel"})
         self.text_encoder_configs = tuple(configs)
 
-    def _maybe_debug_encoder_hidden_states(
-        self, tensor: torch.Tensor, tag: str = "pos"
-    ) -> None:
-        if os.getenv("SGLANG_DEBUG_ENCODER_HIDDEN_STATES", "0") != "1":
-            return
-
-        max_elems = int(os.getenv("SGLANG_DEBUG_MAX_ELEMS", "64"))
-        t_cpu = tensor.detach().float().cpu()
-        flat = t_cpu.reshape(-1)
-        preview = flat[:max_elems].tolist()
-        print(
-            f"[SD3 DEBUG][{tag}] encoder_hidden_states "
-            f"shape={tuple(tensor.shape)} dtype={tensor.dtype} device={tensor.device}"
-        )
-        print(
-            f"[SD3 DEBUG][{tag}] encoder_hidden_states "
-            f"first_{max_elems}={preview}"
-        )
-
-        if os.getenv("SGLANG_DEBUG_FULL_ENCODER_HIDDEN_STATES", "0") == "1":
-            torch.set_printoptions(profile="full")
-            print(f"[SD3 DEBUG][{tag}] encoder_hidden_states_full=\n{t_cpu}")
-
-        dump_path = os.getenv("SGLANG_DEBUG_DUMP_PATH")
-        if dump_path:
-            payload = {
-                "tag": tag,
-                "shape": tuple(tensor.shape),
-                "dtype": str(tensor.dtype),
-                "tensor": t_cpu,
-            }
-            torch.save(payload, dump_path)
-            print(f"[SD3 DEBUG][{tag}] saved tensor to {dump_path}")
-
     def get_pos_prompt_embeds(self, batch):
-        tensor = batch.prompt_embeds[0]
-        self._maybe_debug_encoder_hidden_states(tensor, tag="pos")
-        return tensor
+        return batch.prompt_embeds[0]
 
     def get_neg_prompt_embeds(self, batch):
-        tensor = batch.negative_prompt_embeds[0]
-        self._maybe_debug_encoder_hidden_states(tensor, tag="neg")
-        return tensor
+        return batch.negative_prompt_embeds[0]
 
     def prepare_pos_cond_kwargs(self, batch, device, rotary_emb, dtype):
         return {
