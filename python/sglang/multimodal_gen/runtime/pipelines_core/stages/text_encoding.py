@@ -12,6 +12,9 @@ import torch
 from sglang.multimodal_gen.configs.models.encoders import BaseEncoderOutput
 from sglang.multimodal_gen.configs.pipeline_configs import FluxPipelineConfig
 from sglang.multimodal_gen.configs.pipeline_configs.flux import Flux2PipelineConfig
+from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
+    StableDiffusion3PipelineConfig,
+)
 from sglang.multimodal_gen.runtime.distributed import get_local_torch_device
 from sglang.multimodal_gen.runtime.managers.forward_context import set_forward_context
 from sglang.multimodal_gen.runtime.pipelines_core.schedule_batch import Req
@@ -228,6 +231,9 @@ class TextEncodingStage(PipelineStage):
             tokenizer = self.tokenizers[i]
             text_encoder = self.text_encoders[i]
             encoder_config = encoder_cfgs[i]
+            is_stable_diffusion3 = isinstance(
+                server_args.pipeline_config, StableDiffusion3PipelineConfig
+            )
             preprocess_func = preprocess_funcs[i]
             postprocess_func = postprocess_funcs[i]
             text_encoder_extra_arg = (
@@ -246,6 +252,19 @@ class TextEncodingStage(PipelineStage):
                 encoder_config.tokenizer_kwargs,
                 **text_encoder_extra_arg,
             )
+            # SD3 compatibility:
+            # - CLIP encoders (0,1): fixed length 77
+            # - T5 encoder (2): fixed length 256 (match diffusers SD3 default)
+            if is_stable_diffusion3:
+                tok_kwargs["padding"] = "max_length"
+                if i != 2:
+                    tok_kwargs["max_length"] = (
+                        getattr(encoder_config, "text_len", None)
+                        or getattr(encoder_config, "max_position_embeddings", None)
+                        or 77
+                    )
+                else:
+                    tok_kwargs["max_length"] = 256
 
             text_inputs: dict = server_args.pipeline_config.tokenize_prompt(
                 processed_text_list, tokenizer, tok_kwargs
@@ -261,16 +280,40 @@ class TextEncodingStage(PipelineStage):
                 attention_mask = torch.ones(input_ids.shape[:2], device=target_device)
             else:
                 attention_mask = text_inputs["attention_mask"]
+            # For SD3, do not pass attention_mask to T5 (encoder index 2).
+            t5_attention_mask = (
+                None if (is_stable_diffusion3 and i == 2) else attention_mask
+            )
             with set_forward_context(current_timestep=0, attn_metadata=None):
                 outputs: BaseEncoderOutput = text_encoder(
                     input_ids=input_ids,
-                    attention_mask=attention_mask,
+                    attention_mask=t5_attention_mask,
                     output_hidden_states=True,
                     use_cache=False,
                 )
             prompt_embeds = postprocess_func(outputs, text_inputs)
             if dtype is not None:
                 prompt_embeds = prompt_embeds.to(dtype=dtype)
+            batch_size = len(processed_text_list)
+            num_images_per_prompt = 1
+            if is_stable_diffusion3:
+                # - CLIP encoders (0,1): use pre-final hidden states and collect pooled outputs.
+                # - T5 encoder (2): no pooled output path.
+                if i != 2:
+                    prompt_embeds = prompt_embeds[-2]
+                    tmp_pooled_prompt_embeds = outputs.pooler_output
+                    tmp_pooled_prompt_embeds = tmp_pooled_prompt_embeds.repeat(
+                        1, num_images_per_prompt
+                    )
+                    tmp_pooled_prompt_embeds = tmp_pooled_prompt_embeds.view(
+                        batch_size * num_images_per_prompt, -1
+                    )
+                    pooled_embeds_list.append(tmp_pooled_prompt_embeds)
+                _, seq_len, _ = prompt_embeds.shape
+                prompt_embeds = prompt_embeds.repeat(1, num_images_per_prompt, 1)
+                prompt_embeds = prompt_embeds.view(
+                    batch_size * num_images_per_prompt, seq_len, -1
+                )
 
             embeds_list.append(prompt_embeds)
             if is_flux_v1:
