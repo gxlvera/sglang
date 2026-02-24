@@ -111,3 +111,10 @@ class T5Config(TextEncoderConfig):
             help="Parallel folding mode for T5",
         )
         return parser
+
+
+@dataclass
+class T5ConfigForSD3(T5Config):
+    def __post_init__(self) -> None:
+        # SD3 uses a 256-token T5 context by default.
+        self.tokenizer_kwargs.update({"max_length": 256})
