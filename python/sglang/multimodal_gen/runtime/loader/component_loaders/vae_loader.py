@@ -127,6 +127,12 @@ class VAELoader(ComponentLoader):
             vae = vae_cls(vae_config).to(target_device)
 
         safetensors_list = _list_safetensors_files(component_model_path)
+
+        # Use pipeline-specific weight selection strategy
+        safetensors_list = self._select_vae_weights(
+            safetensors_list, component_model_path, server_args.pipeline_config
+        )
+
         assert (
             len(safetensors_list) == 1
         ), f"Found {len(safetensors_list)} safetensors files in {component_model_path}"
@@ -152,3 +158,32 @@ class VAELoader(ComponentLoader):
                 logger.info("VAE: converted %d Conv3d weights to channels_last_3d", n)
 
         return vae
+
+    def _select_vae_weights(
+        self, safetensors_list, component_model_path, pipeline_config
+    ):
+        """Select appropriate VAE weights based on pipeline configuration."""
+        # Check if pipeline has specific VAE weight selection strategy
+        if (
+            hasattr(pipeline_config, "vae_precision")
+            and hasattr(pipeline_config, "use_precision_specific_weights")
+            and hasattr(pipeline_config, "vae_model_name")
+        ):
+            precision = pipeline_config.vae_precision
+            base_name = pipeline_config.vae_model_name
+
+            # Priority: fp16 > full precision > any matching file
+            if precision == "fp16":
+                fp16_path = os.path.join(
+                    str(component_model_path), f"{base_name}.fp16.safetensors"
+                )
+                target_files = [fp16_path] if os.path.exists(fp16_path) else []
+            else:
+                full_path = os.path.join(
+                    str(component_model_path), f"{base_name}.safetensors"
+                )
+                target_files = [full_path] if os.path.exists(full_path) else []
+            return target_files if target_files else safetensors_list
+
+        # Default: return all found safetensors files
+        return safetensors_list
