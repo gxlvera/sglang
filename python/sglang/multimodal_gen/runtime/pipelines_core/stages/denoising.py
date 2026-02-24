@@ -21,6 +21,9 @@ from tqdm.auto import tqdm
 
 from sglang.multimodal_gen import envs
 from sglang.multimodal_gen.configs.pipeline_configs.base import ModelTaskType, STA_Mode
+from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
+    StableDiffusion3PipelineConfig,
+)
 from sglang.multimodal_gen.configs.pipeline_configs.wan import (
     Wan2_2_TI2V_5B_Config,
     WanI2V480PConfig,
@@ -1096,7 +1099,6 @@ class DenoisingStage(PipelineStage):
                         latents = self.post_forward_for_ti2v_task(
                             batch, server_args, reserved_frames_mask, latents, z
                         )
-
                         # save trajectory latents if needed
                         if batch.return_trajectory_latents:
                             trajectory_timesteps.append(t_host)
@@ -1120,7 +1122,11 @@ class DenoisingStage(PipelineStage):
                 "average time per step: %.4f seconds",
                 (denoising_end_time - denoising_start_time) / len(timesteps),
             )
-
+        _dump_final_latents_tensor(
+            request_id=getattr(batch, "request_id", None),
+            backend="sglang",
+            tensor=latents,
+        )
         self._post_denoising_loop(
             batch=batch,
             latents=latents,
@@ -1388,6 +1394,74 @@ class DenoisingStage(PipelineStage):
         Returns:
             The predicted noise.
         """
+        # SD3 alignment mode: follow diffusers CFG path strictly
+        # (single forward with [uncond, cond] concatenated on batch dim).
+        if isinstance(server_args.pipeline_config, StableDiffusion3PipelineConfig):
+            # Diffusers serial CFG path does not use cfg-parallel split execution.
+            if batch.do_classifier_free_guidance:
+                batch.is_cfg_negative = False
+                latent_cfg = torch.cat([latent_model_input, latent_model_input], dim=0)
+                if isinstance(timestep, torch.Tensor) and timestep.ndim > 0:
+                    timestep_cfg = torch.cat([timestep, timestep], dim=0)
+                else:
+                    timestep_cfg = timestep
+
+                merged_kwargs: dict[str, Any] = dict(image_kwargs)
+                all_keys = set(pos_cond_kwargs.keys()) | set(neg_cond_kwargs.keys())
+                for key in all_keys:
+                    pos_v = pos_cond_kwargs.get(key)
+                    neg_v = neg_cond_kwargs.get(key)
+                    if isinstance(pos_v, torch.Tensor) and isinstance(neg_v, torch.Tensor):
+                        merged_kwargs[key] = torch.cat([neg_v, pos_v], dim=0)
+                    elif pos_v is not None:
+                        merged_kwargs[key] = pos_v
+                    elif neg_v is not None:
+                        merged_kwargs[key] = neg_v
+
+                with set_forward_context(
+                    current_timestep=timestep_index,
+                    attn_metadata=attn_metadata,
+                    forward_batch=batch,
+                ):
+                    noise_pred_full = self._predict_noise(
+                        current_model=current_model,
+                        latent_model_input=latent_cfg,
+                        timestep=timestep_cfg,
+                        target_dtype=target_dtype,
+                        guidance=guidance,
+                        **merged_kwargs,
+                    )
+                    noise_pred_full = server_args.pipeline_config.slice_noise_pred(
+                        noise_pred_full, latent_cfg
+                    )
+                    noise_pred_uncond, noise_pred_cond = noise_pred_full.chunk(2)
+                    noise_pred = noise_pred_uncond + current_guidance_scale * (
+                        noise_pred_cond - noise_pred_uncond
+                    )
+
+                return noise_pred
+
+            # No CFG: same as diffusers, single conditional forward.
+            batch.is_cfg_negative = False
+            with set_forward_context(
+                current_timestep=timestep_index,
+                attn_metadata=attn_metadata,
+                forward_batch=batch,
+            ):
+                noise_pred_cond = self._predict_noise(
+                    current_model=current_model,
+                    latent_model_input=latent_model_input,
+                    timestep=timestep,
+                    target_dtype=target_dtype,
+                    guidance=guidance,
+                    **image_kwargs,
+                    **pos_cond_kwargs,
+                )
+                noise_pred_cond = server_args.pipeline_config.slice_noise_pred(
+                    noise_pred_cond, latents
+                )
+            return noise_pred_cond
+
         noise_pred_cond: torch.Tensor | None = None
         noise_pred_uncond: torch.Tensor | None = None
         cfg_rank = get_classifier_free_guidance_rank()
