@@ -721,6 +721,7 @@ def _register_configs():
         sampling_param_cls=StableDiffusion3SamplingParams,
         pipeline_config_cls=StableDiffusion3PipelineConfig,
         hf_model_paths=["stabilityai/stable-diffusion-3-medium-diffusers"],
+        model_detectors=[lambda hf_id: "stablediffusion3" in hf_id.lower()],
     )
 
     register_configs(
