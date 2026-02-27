@@ -33,9 +33,7 @@ COMPONENT_DIRS = [
 ]
 
 _IMAGE_ENCODER_MODELS: dict[str, tuple] = {
-    # "HunyuanVideoTransformer3DModel": ("image_encoder", "hunyuanvideo", "HunyuanVideoImageEncoder"),
     "CLIPVisionModelWithProjection": ("encoders", "clip", "CLIPVisionModel"),
-    "CLIPTextModelWithProjection": ("encoders", "clip", "CLIPTextModelWithProjection"),
 }
 
 # Global alias mapping: external_path -> canonical_class_name
