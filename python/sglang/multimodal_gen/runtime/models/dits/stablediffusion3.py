@@ -27,6 +27,7 @@ class SD3Transformer2DModel(CachableDiT):
         self,
         config: StableDiffusion3TransformerConfig,
         hf_config: Optional[Dict[str, Any]] = None,
+        quant_config=None,
     ):
         super().__init__(config=config, hf_config=hf_config)
         self.config = config
