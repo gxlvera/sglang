@@ -10,27 +10,22 @@ from sglang.multimodal_gen.configs.models.vaes.base import VAEArchConfig, VAECon
 class StableDiffusion3VAEArchConfig(VAEArchConfig):
     """Architecture configuration for StableDiffusion3 VAE."""
 
-    # SD3 VAE specific parameters
-    scaling_factor: float = 1.5305  # SD3 specific scaling factor
-    shift_factor: float = 0.0609  # SD3 specific shift factor
+    scaling_factor: float = 1.5305
+    shift_factor: float = 0.0609
 
-    # Compression ratios
-    spatial_compression_ratio: int = 8  # 8x spatial compression
-    temporal_compression_ratio: int = 1  # No temporal compression
+    spatial_compression_ratio: int = 8
+    temporal_compression_ratio: int = 1
 
-    # Model architecture parameters
-    in_channels: int = 3  # RGB input
-    out_channels: int = 3  # RGB output
-    latent_channels: int = 16  # SD3 transformer input channels
-    sample_size: int = 128  # Standard input size
+    in_channels: int = 3
+    out_channels: int = 3
+    latent_channels: int = 16
+    sample_size: int = 128
 
-    # Encoder/Decoder block configurations
     block_out_channels: tuple = (128, 256, 512, 512)
     layers_per_block: int = 2
     act_fn: str = "silu"
     norm_num_groups: int = 32
 
-    # Block types for encoder and decoder
     down_block_types: tuple = (
         "DownEncoderBlock2D",
         "DownEncoderBlock2D",
@@ -44,7 +39,6 @@ class StableDiffusion3VAEArchConfig(VAEArchConfig):
         "UpDecoderBlock2D",
     )
 
-    # Attention configuration
     attention_head_dim: int = 8
     mid_block_add_attention: bool = True
     use_quant_conv: bool = False
@@ -59,36 +53,28 @@ class StableDiffusion3VAEConfig(VAEConfig):
         default_factory=StableDiffusion3VAEArchConfig
     )
 
-    # Override base VAE parameters for SD3
     tile_sample_min_height: int = 512
     tile_sample_min_width: int = 512
-    tile_sample_min_num_frames: int = 1  # Image VAE
+    tile_sample_min_num_frames: int = 1
     tile_sample_stride_height: int = 448
     tile_sample_stride_width: int = 448
     tile_sample_stride_num_frames: int = 1
 
-    # Tiling configuration optimized for SD3
     use_tiling: bool = True
-    use_temporal_tiling: bool = False  # Disable for image VAE
+    use_temporal_tiling: bool = False
     use_parallel_tiling: bool = True
     use_temporal_scaling_frames: bool = False
 
     def __post_init__(self):
         """Post initialization for SD3 VAE specific setup."""
         super().__post_init__()
-
-        # Set model class name for SD3 VAE
         self.update_model_arch({"_class_name": "AutoencoderKL"})
-
-        # Update blend frames for image VAE
         self.blend_num_frames = 0
 
     @classmethod
     def from_pretrained_config(cls, config_dict: dict) -> "StableDiffusion3VAEConfig":
         """Create config from diffusers pretrained model config."""
         arch_config = StableDiffusion3VAEArchConfig()
-
-        # Update from config dict if provided
         if config_dict:
             arch_config.scaling_factor = config_dict.get("scaling_factor", 1.5305)
             arch_config.shift_factor = config_dict.get("shift_factor", 0.0609)

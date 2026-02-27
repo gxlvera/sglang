@@ -20,13 +20,12 @@ from sglang.multimodal_gen.configs.pipeline_configs.base import (
     ModelTaskType,
     SpatialImagePipelineConfig,
 )
+from sglang.multimodal_gen.configs.pipeline_configs.hunyuan import (
+    clip_preprocess_text,
+)
 
 
 def t5_preprocess_text(prompt: str) -> str:
-    return prompt
-
-
-def clip_preprocess_text(prompt: str) -> str:
     return prompt
 
 
