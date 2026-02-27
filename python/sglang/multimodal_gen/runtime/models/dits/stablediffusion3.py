@@ -87,7 +87,7 @@ class SD3Transformer2DModel(CachableDiT):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        encoder_hidden_states: torch.Tensor | List[torch.Tensor] = [],
+        encoder_hidden_states: torch.Tensor | None = None,
         pooled_projections: torch.Tensor = None,  # TODO: this should probably be removed
         timestep: torch.LongTensor = None,
         block_controlnet_hidden_states: List = None,
@@ -112,6 +112,9 @@ class SD3Transformer2DModel(CachableDiT):
             If `return_dict` is `True`, returns `Transformer2DModelOutput`; otherwise a tuple
             whose first element is `output` with shape `(batch, out_channels, height, width)`.
         """
+        if encoder_hidden_states is None:
+            raise ValueError("encoder_hidden_states must be provided.")
+
         encoder_embeddings = encoder_hidden_states
         if pooled_projections is None:
             raise ValueError(
