@@ -83,9 +83,6 @@ class StableDiffusion3VAEConfig(VAEConfig):
         # Update blend frames for image VAE
         self.blend_num_frames = 0
 
-    def post_init(self):
-        """Additional initialization after model loading."""
-        pass
 
     @classmethod
     def from_pretrained_config(cls, config_dict: dict) -> "StableDiffusion3VAEConfig":
