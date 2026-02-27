@@ -83,7 +83,6 @@ class StableDiffusion3VAEConfig(VAEConfig):
         # Update blend frames for image VAE
         self.blend_num_frames = 0
 
-
     @classmethod
     def from_pretrained_config(cls, config_dict: dict) -> "StableDiffusion3VAEConfig":
         """Create config from diffusers pretrained model config."""

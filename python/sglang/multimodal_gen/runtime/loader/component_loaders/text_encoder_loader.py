@@ -182,7 +182,9 @@ class TextEncoderLoader(ComponentLoader):
 
         encoder_index = self._extract_encoder_index(component_name)
         num_encoder_configs = len(server_args.pipeline_config.text_encoder_configs)
-        num_encoder_precisions = len(server_args.pipeline_config.text_encoder_precisions)
+        num_encoder_precisions = len(
+            server_args.pipeline_config.text_encoder_precisions
+        )
         if encoder_index >= num_encoder_configs:
             raise IndexError(
                 f"Component '{component_name}' resolved to encoder index {encoder_index}, "
@@ -200,7 +202,9 @@ class TextEncoderLoader(ComponentLoader):
         if encoder_index == 0:
             for key, value in diffusers_pretrained_config.__dict__.items():
                 setattr(encoder_config.arch_config, key, value)
-        encoder_dtype = server_args.pipeline_config.text_encoder_precisions[encoder_index]
+        encoder_dtype = server_args.pipeline_config.text_encoder_precisions[
+            encoder_index
+        ]
         # TODO(will): add support for other dtypes
         return self.load_model(
             component_model_path,

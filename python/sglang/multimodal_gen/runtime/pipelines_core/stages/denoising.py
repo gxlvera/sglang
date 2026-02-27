@@ -1406,7 +1406,9 @@ class DenoisingStage(PipelineStage):
                 for key in all_keys:
                     pos_v = pos_cond_kwargs.get(key)
                     neg_v = neg_cond_kwargs.get(key)
-                    if isinstance(pos_v, torch.Tensor) and isinstance(neg_v, torch.Tensor):
+                    if isinstance(pos_v, torch.Tensor) and isinstance(
+                        neg_v, torch.Tensor
+                    ):
                         merged_kwargs[key] = torch.cat([neg_v, pos_v], dim=0)
                     elif pos_v is not None:
                         merged_kwargs[key] = pos_v

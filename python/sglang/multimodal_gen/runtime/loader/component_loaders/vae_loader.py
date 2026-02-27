@@ -6,10 +6,10 @@ import torch.nn as nn
 from safetensors.torch import load_file as safetensors_load_file
 
 from sglang.multimodal_gen import envs
+from sglang.multimodal_gen.configs.models import ModelConfig
 from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
     StableDiffusion3PipelineConfig,
 )
-from sglang.multimodal_gen.configs.models import ModelConfig
 from sglang.multimodal_gen.runtime.loader.component_loaders.component_loader import (
     ComponentLoader,
 )
@@ -170,8 +170,7 @@ class VAELoader(ComponentLoader):
         # Check if pipeline has specific VAE weight selection strategy
         if (
             pipeline_config.vae_precision is not None
-            and
-            pipeline_config.use_precision_specific_weights
+            and pipeline_config.use_precision_specific_weights
             and pipeline_config.vae_model_name is not None
         ):
             precision = pipeline_config.vae_precision

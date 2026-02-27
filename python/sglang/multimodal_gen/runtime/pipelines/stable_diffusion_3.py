@@ -25,9 +25,7 @@ class SD3ConditioningStage(PipelineStage):
 
     @torch.no_grad()
     def forward(self, batch: Req, server_args: ServerArgs) -> Req:
-        batch = self._merge_embeddings(
-            batch.prompt_embeds, batch.pooled_embeds, batch
-        )
+        batch = self._merge_embeddings(batch.prompt_embeds, batch.pooled_embeds, batch)
         if batch.do_classifier_free_guidance:
             batch = self._merge_negative_embeddings(
                 batch.negative_prompt_embeds, batch.neg_pooled_embeds, batch
@@ -68,9 +66,7 @@ class SD3ConditioningStage(PipelineStage):
         neg_clip_merged = torch.nn.functional.pad(
             neg_clip_merged, (0, neg_t5.shape[-1] - neg_clip_merged.shape[-1])
         )
-        batch.negative_prompt_embeds = [
-            torch.cat([neg_clip_merged, neg_t5], dim=-2)
-        ]
+        batch.negative_prompt_embeds = [torch.cat([neg_clip_merged, neg_t5], dim=-2)]
         batch.neg_pooled_embeds = [
             torch.cat([neg_pooled_list[0], neg_pooled_list[1]], dim=-1)
         ]

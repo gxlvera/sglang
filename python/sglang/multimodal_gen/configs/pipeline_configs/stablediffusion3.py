@@ -78,13 +78,13 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         )
     )
 
-    postprocess_text_funcs: tuple[Callable[[BaseEncoderOutput, dict], torch.Tensor], ...] = (
-        field(
-            default_factory=lambda: (
-                clip_postprocess_text,
-                clip_postprocess_text,
-                t5_postprocess_text,
-            )
+    postprocess_text_funcs: tuple[
+        Callable[[BaseEncoderOutput, dict], torch.Tensor], ...
+    ] = field(
+        default_factory=lambda: (
+            clip_postprocess_text,
+            clip_postprocess_text,
+            t5_postprocess_text,
         )
     )
 
