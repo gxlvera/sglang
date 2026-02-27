@@ -30,20 +30,20 @@ class SD3Transformer2DModel(CachableDiT):
     ):
         super().__init__(config=config, hf_config=hf_config)
         self.config = config
-        arch_config = getattr(config, "arch_config", None)
-        sample_size = getattr(arch_config, "sample_size", 128)
-        patch_size = getattr(arch_config, "patch_size", 2)
-        in_channels = getattr(arch_config, "in_channels", 16)
-        num_layers = getattr(arch_config, "num_layers", 18)
-        attention_head_dim = getattr(arch_config, "attention_head_dim", 64)
-        num_attention_heads = getattr(arch_config, "num_attention_heads", 18)
-        joint_attention_dim = getattr(arch_config, "joint_attention_dim", 4096)
-        caption_projection_dim = getattr(arch_config, "caption_projection_dim", 1152)
-        pooled_projection_dim = getattr(arch_config, "pooled_projection_dim", 2048)
-        out_channels = getattr(arch_config, "out_channels", 16)
-        pos_embed_max_size = getattr(arch_config, "pos_embed_max_size", 96)
-        dual_attention_layers = getattr(arch_config, "dual_attention_layers", ())
-        qk_norm = getattr(arch_config, "qk_norm", None)
+        arch_config = config.arch_config
+        sample_size = arch_config.sample_size
+        patch_size = arch_config.patch_size
+        in_channels = arch_config.in_channels
+        num_layers = arch_config.num_layers
+        attention_head_dim = arch_config.attention_head_dim
+        num_attention_heads = arch_config.num_attention_heads
+        joint_attention_dim = arch_config.joint_attention_dim
+        caption_projection_dim = arch_config.caption_projection_dim
+        pooled_projection_dim = arch_config.pooled_projection_dim
+        out_channels = arch_config.out_channels
+        pos_embed_max_size = arch_config.pos_embed_max_size
+        dual_attention_layers = arch_config.dual_attention_layers
+        qk_norm = arch_config.qk_norm
 
         self.out_channels = out_channels if out_channels is not None else in_channels
         self.inner_dim = num_attention_heads * attention_head_dim
