@@ -7,8 +7,6 @@ Prompt encoding stages for diffusion pipelines.
 This module contains implementations of prompt encoding stages for diffusion pipelines.
 """
 
-from inspect import signature
-
 import torch
 
 from sglang.multimodal_gen.configs.models.encoders import BaseEncoderOutput
@@ -76,6 +74,7 @@ class TextEncodingStage(PipelineStage):
             encoder_index=all_indices,
             return_attention_mask=True,
         )
+
         for pe in prompt_embeds_list:
             batch.prompt_embeds.append(pe)
 
@@ -283,10 +282,6 @@ class TextEncodingStage(PipelineStage):
                 attention_mask = None
             else:
                 attention_mask = text_inputs["attention_mask"]
-            # For SD3, do not pass attention_mask to T5 (encoder index 2).
-            t5_attention_mask = (
-                None if (is_stable_diffusion3 and i == 2) else attention_mask
-            )
             with set_forward_context(current_timestep=0, attn_metadata=None):
                 outputs: BaseEncoderOutput = text_encoder(
                     input_ids=input_ids,
@@ -304,9 +299,7 @@ class TextEncodingStage(PipelineStage):
                 # - T5 encoder (2): no pooled output path.
                 if i != 2:
                     prompt_embeds = prompt_embeds[-2]
-                    tmp_pooled_prompt_embeds = getattr(outputs, "pooler_output", None)
-                    if tmp_pooled_prompt_embeds is None:
-                        tmp_pooled_prompt_embeds = outputs[0]
+                    tmp_pooled_prompt_embeds = outputs.pooler_output
                     tmp_pooled_prompt_embeds = tmp_pooled_prompt_embeds.repeat(
                         1, num_images_per_prompt
                     )
