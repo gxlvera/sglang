@@ -96,41 +96,28 @@ class SD3Transformer2DModel(CachableDiT):
         return_dict: bool = True,
         skip_layers: Optional[List[int]] = None,
     ) -> torch.Tensor:
+        """Run SD3 transformer blocks and return denoised latent predictions.
+
+        Args:
+            hidden_states: Input latent tensor of shape `(batch, channel, height, width)`.
+            encoder_hidden_states: Conditional text embeddings.
+            pooled_projections: Pooled conditional embeddings.
+            timestep: Denoising timestep.
+            block_controlnet_hidden_states: Optional per-block residuals from ControlNet.
+            guidance: Unused placeholder for compatibility.
+            joint_attention_kwargs: Optional kwargs forwarded to attention processors.
+            return_dict: Reserved for API compatibility.
+            skip_layers: Optional transformer block indices to skip.
+        Returns:
+            If `return_dict` is `True`, returns `Transformer2DModelOutput`; otherwise a tuple
+            whose first element is `output` with shape `(batch, out_channels, height, width)`.
+        """
         encoder_embeddings = encoder_hidden_states
         if pooled_projections is None:
             raise ValueError(
                 "pooled_projections must be provided when encoder_hidden_states "
                 "is passed as a tensor."
             )
-
-        """
-        The [`SD3Transformer2DModel`] forward method.
-
-        Args:
-            hidden_states (`torch.Tensor` of shape `(batch size, channel, height, width)`):
-                Input `hidden_states`.
-            encoder_hidden_states (`torch.Tensor` of shape `(batch size, sequence_len, embed_dims)`):
-                Conditional embeddings (embeddings computed from the input conditions such as prompts) to use.
-            pooled_projections (`torch.Tensor` of shape `(batch_size, projection_dim)`):
-                Embeddings projected from the embeddings of input conditions.
-            timestep (`torch.LongTensor`):
-                Used to indicate denoising step.
-            block_controlnet_hidden_states (`list` of `torch.Tensor`):
-                A list of tensors that if specified are added to the residuals of transformer blocks.
-            joint_attention_kwargs (`dict`, *optional*):
-                A kwargs dictionary that if specified is passed along to the `AttentionProcessor` as defined under
-                `self.processor` in
-                [diffusers.models.attention_processor](https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
-            return_dict (`bool`, *optional*, defaults to `True`):
-                Whether or not to return a [`~models.transformer_2d.Transformer2DModelOutput`] instead of a plain
-                tuple.
-            skip_layers (`list` of `int`, *optional*):
-                A list of layer indices to skip during the forward pass.
-
-        Returns:
-            If `return_dict` is True, an [`~models.transformer_2d.Transformer2DModelOutput`] is returned, otherwise a
-            `tuple` where the first element is the sample tensor.
-        """
         if joint_attention_kwargs is not None:
             joint_attention_kwargs = joint_attention_kwargs.copy()
             if joint_attention_kwargs.pop("scale", None) is not None:
