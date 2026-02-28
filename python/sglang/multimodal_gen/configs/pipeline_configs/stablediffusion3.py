@@ -31,8 +31,7 @@ def t5_preprocess_text(prompt: str) -> str:
 
 def clip_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
     """
-    Keep raw hidden states and select pre-final layer in TextEncodingStage
-    to match sglang-2 SD3 implementation.
+    Keep raw hidden states and select pre-final layer in TextEncodingStage.
     """
     assert outputs.hidden_states is not None
     return outputs.hidden_states
