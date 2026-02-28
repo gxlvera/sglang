@@ -139,12 +139,8 @@ class SD3Transformer2DModel(CachableDiT):
 
         for index_block, block in enumerate(self.transformer_blocks):
             # Skip specified layers
-            is_skip = (
-                True
-                if skip_layers is not None and index_block in skip_layers
-                else False
-            )
-
+            is_skip = skip_layers is not None and index_block in skip_layers
+            
             if not is_skip:
                 encoder_embeddings, hidden_states = block(
                     hidden_states=hidden_states,
