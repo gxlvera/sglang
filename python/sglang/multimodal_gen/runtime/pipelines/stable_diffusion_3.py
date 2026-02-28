@@ -39,7 +39,15 @@ class SD3ConditioningStage(PipelineStage):
         batch: Req,
     ) -> Req:
         if len(prompt_embeds_list) != 3:
-            return batch
+            raise ValueError(
+                "SD3 requires exactly 3 prompt embedding tensors, "
+                f"got {len(prompt_embeds_list)}."
+            )
+        if len(pooled_embeds_list) < 2:
+            raise ValueError(
+                "SD3 requires at least 2 pooled embedding tensors, "
+                f"got {len(pooled_embeds_list)}."
+            )
 
         clipt, clipg, t5 = prompt_embeds_list
         clip_merged = torch.cat([clipt, clipg], dim=-1)
@@ -59,7 +67,15 @@ class SD3ConditioningStage(PipelineStage):
         batch: Req,
     ) -> Req:
         if len(neg_embeds_list) != 3:
-            return batch
+            raise ValueError(
+                "SD3 requires exactly 3 negative prompt embedding tensors, "
+                f"got {len(neg_embeds_list)}."
+            )
+        if len(neg_pooled_list) < 2:
+            raise ValueError(
+                "SD3 requires at least 2 negative pooled embedding tensors, "
+                f"got {len(neg_pooled_list)}."
+            )
 
         neg_clipt, neg_clipg, neg_t5 = neg_embeds_list
         neg_clip_merged = torch.cat([neg_clipt, neg_clipg], dim=-1)
