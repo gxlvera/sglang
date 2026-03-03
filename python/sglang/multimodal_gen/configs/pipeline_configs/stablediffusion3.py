@@ -83,8 +83,8 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
     # SD3 specific parameters
     should_use_guidance: bool = False
     guidance_scale: float = 7.0
-    use_precision_specific_weights = True
-    vae_model_name = "diffusion_pytorch_model"
+    use_precision_specific_weights: bool = True
+    vae_model_name: str = "diffusion_pytorch_model"
 
     def __post_init__(self):
         self.dit_config.update_model_arch({"_class_name": "SD3Transformer2DModel"})
@@ -127,10 +127,8 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
 
     # SD3 image latents are spatial (B, C, H, W), not video-like (B, C, T, H, W).
     def prepare_latent_shape(self, batch, batch_size, num_frames):  # noqa: ARG002
-        spatial_ratio = getattr(
-            self.vae_config.arch_config, "spatial_compression_ratio", 8
-        )
-        in_channels = getattr(self.dit_config.arch_config, "in_channels", 16)
+        spatial_ratio = self.vae_config.arch_config.spatial_compression_ratio
+        in_channels = self.dit_config.arch_config.in_channels
         return (
             batch_size,
             in_channels,
