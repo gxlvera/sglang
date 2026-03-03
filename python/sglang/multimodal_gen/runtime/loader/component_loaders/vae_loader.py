@@ -7,6 +7,7 @@ from safetensors.torch import load_file as safetensors_load_file
 
 from sglang.multimodal_gen import envs
 from sglang.multimodal_gen.configs.models import ModelConfig
+from sglang.multimodal_gen.configs.pipeline_configs.base import PipelineConfig
 from sglang.multimodal_gen.runtime.loader.component_loaders.component_loader import (
     ComponentLoader,
 )
@@ -161,14 +162,16 @@ class VAELoader(ComponentLoader):
         return vae
 
     def _select_vae_weights(
-        self, safetensors_list, component_model_path, pipeline_config
-    ):
+        self,
+        safetensors_list: list[str],
+        component_model_path: str,
+        pipeline_config: PipelineConfig,
+    ) -> list[str]:
         """Select appropriate VAE weights based on pipeline configuration."""
-        # Check if pipeline has specific VAE weight selection strategy
         if (
             pipeline_config.vae_precision is not None
-            and getattr(pipeline_config, "use_precision_specific_weights", False)
-            and getattr(pipeline_config, "vae_model_name", None) is not None
+            and pipeline_config.use_precision_specific_weights
+            and pipeline_config.vae_model_name is not None
         ):
             precision = pipeline_config.vae_precision
             base_name = pipeline_config.vae_model_name

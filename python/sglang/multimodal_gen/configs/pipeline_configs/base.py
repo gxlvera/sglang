@@ -185,6 +185,8 @@ class PipelineConfig:
     vae_precision: str = "fp32"
     vae_tiling: bool = True
     vae_sp: bool = True
+    use_precision_specific_weights: bool = False
+    vae_model_name: str | None = None
 
     # Image encoder configuration
     image_encoder_config: EncoderConfig = field(default_factory=EncoderConfig)

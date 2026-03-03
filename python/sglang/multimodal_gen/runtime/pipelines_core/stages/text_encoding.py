@@ -280,8 +280,6 @@ class TextEncodingStage(PipelineStage):
             pooled = server_args.pipeline_config.extract_pooled_output(i, outputs)
             if pooled is not None:
                 pooled_embeds_list.append(pooled)
-            if is_flux_v1:
-                pooled_embeds_list.append(outputs.pooler_output)
             if return_attention_mask:
                 attn_masks_list.append(attention_mask)
 

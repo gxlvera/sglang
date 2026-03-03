@@ -39,6 +39,12 @@ class SD3ConditioningStage(PipelineStage):
         embeds_list: list[torch.Tensor],
         pooled_list: list[torch.Tensor],
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """Merge 3 encoder outputs into unified prompt/pooled tensors.
+
+        SD3-medium uses exactly 3 text encoders (CLIP-L, CLIP-G, T5).
+        Returns single-element lists to match the batch field format expected
+        by downstream stages (get_pos_prompt_embeds accesses index [0]).
+        """
         if len(embeds_list) != 3:
             raise ValueError(
                 f"SD3 requires exactly 3 prompt embedding tensors, got {len(embeds_list)}."

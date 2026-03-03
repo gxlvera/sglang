@@ -95,6 +95,7 @@ class CLIPTextConfig(TextEncoderConfig):
 @dataclass
 class CLIPTextConfigForSD3(CLIPTextConfig):
     def __post_init__(self) -> None:
+        super().__post_init__()
         # SD3 CLIP encoders use fixed 77-token context.
         self.tokenizer_kwargs.update(
             {

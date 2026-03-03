@@ -1096,6 +1096,7 @@ class DenoisingStage(PipelineStage):
                         latents = self.post_forward_for_ti2v_task(
                             batch, server_args, reserved_frames_mask, latents, z
                         )
+
                         # save trajectory latents if needed
                         if batch.return_trajectory_latents:
                             trajectory_timesteps.append(t_host)
@@ -1119,6 +1120,7 @@ class DenoisingStage(PipelineStage):
                 "average time per step: %.4f seconds",
                 (denoising_end_time - denoising_start_time) / len(timesteps),
             )
+
         self._post_denoising_loop(
             batch=batch,
             latents=latents,

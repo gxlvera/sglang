@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-"""StableDiffusion3 Transformer model implementation."""
+"""StableDiffusion3 Transformer model implementation.
 
-from typing import Any, Dict, List, Optional
+NOTE: This initial implementation uses diffusers' JointTransformerBlock directly.
+A native SGLang attention implementation is needed for FlashAttention, TP/SP,
+quantization, and LoRA support.
+"""
+
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -26,7 +31,7 @@ class SD3Transformer2DModel(CachableDiT):
     def __init__(
         self,
         config: StableDiffusion3TransformerConfig,
-        hf_config: Optional[Dict[str, Any]] = None,
+        hf_config: dict[str, Any] | None = None,
         quant_config=None,
     ):
         super().__init__(config=config, hf_config=hf_config)
@@ -48,6 +53,7 @@ class SD3Transformer2DModel(CachableDiT):
 
         self.out_channels = out_channels if out_channels is not None else in_channels
         self.inner_dim = num_attention_heads * attention_head_dim
+        self.patch_size = patch_size
 
         self.pos_embed = PatchEmbed(
             height=sample_size,
@@ -55,7 +61,7 @@ class SD3Transformer2DModel(CachableDiT):
             patch_size=patch_size,
             in_channels=in_channels,
             embed_dim=self.inner_dim,
-            pos_embed_max_size=pos_embed_max_size,  # hard-code for now.
+            pos_embed_max_size=pos_embed_max_size,
         )
         self.time_text_embed = CombinedTimestepTextProjEmbeddings(
             embedding_dim=self.inner_dim, pooled_projection_dim=pooled_projection_dim
@@ -70,7 +76,7 @@ class SD3Transformer2DModel(CachableDiT):
                     attention_head_dim=attention_head_dim,
                     context_pre_only=i == num_layers - 1,
                     qk_norm=qk_norm,
-                    use_dual_attention=True if i in dual_attention_layers else False,
+                    use_dual_attention=i in dual_attention_layers,
                 )
                 for i in range(num_layers)
             ]
@@ -89,59 +95,36 @@ class SD3Transformer2DModel(CachableDiT):
         self,
         hidden_states: torch.Tensor,
         encoder_hidden_states: torch.Tensor | None = None,
-        pooled_projections: torch.Tensor = None,  # TODO: this should probably be removed
-        timestep: torch.LongTensor = None,
-        block_controlnet_hidden_states: List = None,
-        guidance: torch.Tensor = None,  # TODO: this should probably be removed
-        joint_attention_kwargs: Optional[Dict[str, Any]] = None,
-        return_dict: bool = True,
-        skip_layers: Optional[List[int]] = None,
+        pooled_projections: torch.Tensor | None = None,
+        timestep: torch.LongTensor | None = None,
+        block_controlnet_hidden_states: list | None = None,
+        joint_attention_kwargs: dict[str, Any] | None = None,
+        skip_layers: list[int] | None = None,
     ) -> torch.Tensor:
-        """Run SD3 transformer blocks and return denoised latent predictions.
-
-        Args:
-            hidden_states: Input latent tensor of shape `(batch, channel, height, width)`.
-            encoder_hidden_states: Conditional text embeddings.
-            pooled_projections: Pooled conditional embeddings.
-            timestep: Denoising timestep.
-            block_controlnet_hidden_states: Optional per-block residuals from ControlNet.
-            guidance: Unused placeholder for compatibility.
-            joint_attention_kwargs: Optional kwargs forwarded to attention processors.
-            return_dict: Reserved for API compatibility.
-            skip_layers: Optional transformer block indices to skip.
-        Returns:
-            If `return_dict` is `True`, returns `Transformer2DModelOutput`; otherwise a tuple
-            whose first element is `output` with shape `(batch, out_channels, height, width)`.
-        """
         if encoder_hidden_states is None:
             raise ValueError("encoder_hidden_states must be provided.")
+        if pooled_projections is None:
+            raise ValueError("pooled_projections must be provided.")
 
         encoder_embeddings = encoder_hidden_states
-        if pooled_projections is None:
-            raise ValueError(
-                "pooled_projections must be provided when encoder_hidden_states "
-                "is passed as a tensor."
-            )
-        if joint_attention_kwargs is not None:
-            joint_attention_kwargs = joint_attention_kwargs.copy()
-            if joint_attention_kwargs.pop("scale", None) is not None:
-                logger.warning(
-                    "Passing `scale` via `joint_attention_kwargs` when not using the PEFT backend is ineffective."
-                )
 
         height, width = hidden_states.shape[-2:]
 
-        hidden_states = self.pos_embed(
-            hidden_states
-        )  # takes care of adding positional embeddings too.
+        hidden_states = self.pos_embed(hidden_states)
         temb = self.time_text_embed(timestep, pooled_projections)
         encoder_embeddings = self.context_embedder(encoder_embeddings)
 
-        for index_block, block in enumerate(self.transformer_blocks):
-            # Skip specified layers
-            is_skip = skip_layers is not None and index_block in skip_layers
+        skip_layer_set = set(skip_layers) if skip_layers else set()
 
-            if not is_skip:
+        if block_controlnet_hidden_states is not None:
+            interval_control = len(self.transformer_blocks) / len(
+                block_controlnet_hidden_states
+            )
+        else:
+            interval_control = 0
+
+        for index_block, block in enumerate(self.transformer_blocks):
+            if index_block not in skip_layer_set:
                 encoder_embeddings, hidden_states = block(
                     hidden_states=hidden_states,
                     encoder_hidden_states=encoder_embeddings,
@@ -154,9 +137,6 @@ class SD3Transformer2DModel(CachableDiT):
                 block_controlnet_hidden_states is not None
                 and block.context_pre_only is False
             ):
-                interval_control = len(self.transformer_blocks) / len(
-                    block_controlnet_hidden_states
-                )
                 hidden_states = (
                     hidden_states
                     + block_controlnet_hidden_states[
@@ -168,7 +148,7 @@ class SD3Transformer2DModel(CachableDiT):
         hidden_states = self.proj_out(hidden_states)
 
         # unpatchify
-        patch_size = self.config.patch_size
+        patch_size = self.patch_size
         height = height // patch_size
         width = width // patch_size
 

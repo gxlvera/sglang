@@ -3,7 +3,7 @@ import glob
 import os
 import re
 from collections.abc import Generator, Iterable
-from typing import Generator, Iterable, cast
+from typing import cast
 
 import torch
 import torch.distributed as dist
@@ -199,9 +199,8 @@ class TextEncoderLoader(ComponentLoader):
         encoder_config = server_args.pipeline_config.text_encoder_configs[encoder_index]
         encoder_config.update_model_arch(model_config)
 
-        if encoder_index == 0:
-            for key, value in diffusers_pretrained_config.__dict__.items():
-                setattr(encoder_config.arch_config, key, value)
+        for key, value in diffusers_pretrained_config.__dict__.items():
+            setattr(encoder_config.arch_config, key, value)
         encoder_dtype = server_args.pipeline_config.text_encoder_precisions[
             encoder_index
         ]

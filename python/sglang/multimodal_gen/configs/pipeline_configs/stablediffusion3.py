@@ -21,14 +21,14 @@ from sglang.multimodal_gen.configs.pipeline_configs.base import (
     SpatialImagePipelineConfig,
     preprocess_text,
 )
-from sglang.multimodal_gen.configs.pipeline_configs.hunyuan import (
-    clip_preprocess_text,
-)
 
 
-def clip_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
+def sd3_clip_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
     """Extract pre-final hidden state for SD3 CLIP encoders."""
-    assert outputs.hidden_states is not None
+    if outputs.hidden_states is None:
+        raise ValueError(
+            "SD3 CLIP postprocessing requires hidden_states from encoder output."
+        )
     return outputs.hidden_states[-2]
 
 
@@ -64,8 +64,8 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
 
     preprocess_text_funcs: tuple[Callable[[str], str], ...] = field(
         default_factory=lambda: (
-            clip_preprocess_text,
-            clip_preprocess_text,
+            preprocess_text,
+            preprocess_text,
             preprocess_text,
         )
     )
@@ -74,8 +74,8 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         Callable[[BaseEncoderOutput, dict], torch.Tensor], ...
     ] = field(
         default_factory=lambda: (
-            clip_postprocess_text,
-            clip_postprocess_text,
+            sd3_clip_postprocess_text,
+            sd3_clip_postprocess_text,
             t5_postprocess_text,
         )
     )
@@ -86,8 +86,8 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
     use_precision_specific_weights: bool = True
     vae_model_name: str = "diffusion_pytorch_model"
 
-    def __post_init__(self):
-        self.dit_config.update_model_arch({"_class_name": "SD3Transformer2DModel"})
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
         configs = list(self.text_encoder_configs)
         configs[0].update_model_arch({"_class_name": "CLIPTextModelWithProjection"})
@@ -132,6 +132,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         return (
             batch_size,
             in_channels,
-            int(batch.height) // spatial_ratio,
-            int(batch.width) // spatial_ratio,
+            batch.height // spatial_ratio,
+            batch.width // spatial_ratio,
         )
