@@ -395,20 +395,11 @@ class PipelineConfig:
         return frames
 
     def get_encoder_attention_mask(self, encoder_index, text_inputs, device):
-        """Return the attention mask for a given text encoder.
-
-        Subclasses can override to customise per-encoder masking behaviour
-        (e.g. return ``None`` to disable masking for all encoders).
-        """
+        """Return the attention mask for a given text encoder."""
         return text_inputs.get("attention_mask")
 
     def extract_pooled_output(self, encoder_index, encoder_outputs):
-        """Extract an optional pooled embedding from encoder outputs.
-
-        Return a tensor to append to `pooled_embeds_list`, or ``None`` to
-        skip.  Subclasses override to collect pooled outputs for specific
-        encoder indices.
-        """
+        """Extract an optional pooled embedding from encoder outputs."""
         return None
 
     def prepare_pos_cond_kwargs(self, batch, device, rotary_emb, dtype):
