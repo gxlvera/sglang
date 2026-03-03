@@ -88,9 +88,7 @@ class FluxPipelineConfig(ImagePipelineConfig):
 
     def extract_pooled_output(self, encoder_index, encoder_outputs):
         """Flux v1 collects pooled output from the CLIP encoder (index 0)."""
-        if encoder_index == 0:
-            return encoder_outputs.pooler_output
-        return None
+        return encoder_outputs.pooler_output if encoder_index == 0 else None
 
     def prepare_sigmas(self, sigmas, num_inference_steps):
         return self._prepare_sigmas(sigmas, num_inference_steps)
