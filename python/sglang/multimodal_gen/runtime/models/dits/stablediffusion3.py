@@ -140,7 +140,7 @@ class SD3Transformer2DModel(CachableDiT):
         for index_block, block in enumerate(self.transformer_blocks):
             # Skip specified layers
             is_skip = skip_layers is not None and index_block in skip_layers
-            
+
             if not is_skip:
                 encoder_embeddings, hidden_states = block(
                     hidden_states=hidden_states,
@@ -182,7 +182,7 @@ class SD3Transformer2DModel(CachableDiT):
                 self.out_channels,
             )
         )
-        hidden_states = torch.einsum("nhwpqc->nchpwq", hidden_states)
+        hidden_states = hidden_states.permute(0, 5, 1, 3, 2, 4)
         output = hidden_states.reshape(
             shape=(
                 hidden_states.shape[0],

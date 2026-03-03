@@ -19,22 +19,17 @@ from sglang.multimodal_gen.configs.models.vaes.stablediffusion3 import (
 from sglang.multimodal_gen.configs.pipeline_configs.base import (
     ModelTaskType,
     SpatialImagePipelineConfig,
+    preprocess_text,
 )
 from sglang.multimodal_gen.configs.pipeline_configs.hunyuan import (
     clip_preprocess_text,
 )
 
 
-def t5_preprocess_text(prompt: str) -> str:
-    return prompt
-
-
 def clip_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
-    """
-    Keep raw hidden states and select pre-final layer in TextEncodingStage.
-    """
+    """Extract pre-final hidden state for SD3 CLIP encoders."""
     assert outputs.hidden_states is not None
-    return outputs.hidden_states
+    return outputs.hidden_states[-2]
 
 
 def t5_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tensor:
@@ -43,8 +38,7 @@ def t5_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tenso
 
 @dataclass
 class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
-    """
-    Configuration for SD3 text/image generation.
+    """Configuration for SD3 image generation pipeline.
 
     This config intentionally relies on SD3-specific encoder configs to provide
     tokenizer kwargs, instead of stage-level tokenizer overrides.
@@ -72,7 +66,7 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         default_factory=lambda: (
             clip_preprocess_text,
             clip_preprocess_text,
-            t5_preprocess_text,
+            preprocess_text,
         )
     )
 
@@ -100,6 +94,16 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         configs[1].update_model_arch({"_class_name": "CLIPTextModelWithProjection"})
         configs[2].update_model_arch({"_class_name": "T5EncoderModel"})
         self.text_encoder_configs = tuple(configs)
+
+    def get_encoder_attention_mask(self, encoder_index, text_inputs, device):
+        """SD3 does not pass attention masks to its text encoders."""
+        return None
+
+    def extract_pooled_output(self, encoder_index, encoder_outputs):
+        """SD3 CLIP encoders (indices 0, 1) produce pooled outputs."""
+        if encoder_index <= 1:
+            return encoder_outputs.pooler_output
+        return None
 
     def get_pos_prompt_embeds(self, batch):
         return batch.prompt_embeds[0]

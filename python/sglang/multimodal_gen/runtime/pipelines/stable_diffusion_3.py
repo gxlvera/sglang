@@ -25,68 +25,37 @@ class SD3ConditioningStage(PipelineStage):
 
     @torch.no_grad()
     def forward(self, batch: Req, server_args: ServerArgs) -> Req:
-        batch = self._merge_embeddings(batch.prompt_embeds, batch.pooled_embeds, batch)
+        batch.prompt_embeds, batch.pooled_embeds = self._merge(
+            batch.prompt_embeds, batch.pooled_embeds
+        )
         if batch.do_classifier_free_guidance:
-            batch = self._merge_negative_embeddings(
-                batch.negative_prompt_embeds, batch.neg_pooled_embeds, batch
+            batch.negative_prompt_embeds, batch.neg_pooled_embeds = self._merge(
+                batch.negative_prompt_embeds, batch.neg_pooled_embeds
             )
         return batch
 
-    def _merge_embeddings(
-        self,
-        prompt_embeds_list: list[torch.Tensor],
-        pooled_embeds_list: list[torch.Tensor],
-        batch: Req,
-    ) -> Req:
-        if len(prompt_embeds_list) != 3:
+    @staticmethod
+    def _merge(
+        embeds_list: list[torch.Tensor],
+        pooled_list: list[torch.Tensor],
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        if len(embeds_list) != 3:
             raise ValueError(
-                "SD3 requires exactly 3 prompt embedding tensors, "
-                f"got {len(prompt_embeds_list)}."
+                f"SD3 requires exactly 3 prompt embedding tensors, got {len(embeds_list)}."
             )
-        if len(pooled_embeds_list) < 2:
+        if len(pooled_list) < 2:
             raise ValueError(
-                "SD3 requires at least 2 pooled embedding tensors, "
-                f"got {len(pooled_embeds_list)}."
+                f"SD3 requires at least 2 pooled embedding tensors, got {len(pooled_list)}."
             )
 
-        clipt, clipg, t5 = prompt_embeds_list
+        clipt, clipg, t5 = embeds_list
         clip_merged = torch.cat([clipt, clipg], dim=-1)
         clip_merged = torch.nn.functional.pad(
             clip_merged, (0, t5.shape[-1] - clip_merged.shape[-1])
         )
-        batch.prompt_embeds = [torch.cat([clip_merged, t5], dim=-2)]
-        batch.pooled_embeds = [
-            torch.cat([pooled_embeds_list[0], pooled_embeds_list[1]], dim=-1)
-        ]
-        return batch
-
-    def _merge_negative_embeddings(
-        self,
-        neg_embeds_list: list[torch.Tensor],
-        neg_pooled_list: list[torch.Tensor],
-        batch: Req,
-    ) -> Req:
-        if len(neg_embeds_list) != 3:
-            raise ValueError(
-                "SD3 requires exactly 3 negative prompt embedding tensors, "
-                f"got {len(neg_embeds_list)}."
-            )
-        if len(neg_pooled_list) < 2:
-            raise ValueError(
-                "SD3 requires at least 2 negative pooled embedding tensors, "
-                f"got {len(neg_pooled_list)}."
-            )
-
-        neg_clipt, neg_clipg, neg_t5 = neg_embeds_list
-        neg_clip_merged = torch.cat([neg_clipt, neg_clipg], dim=-1)
-        neg_clip_merged = torch.nn.functional.pad(
-            neg_clip_merged, (0, neg_t5.shape[-1] - neg_clip_merged.shape[-1])
-        )
-        batch.negative_prompt_embeds = [torch.cat([neg_clip_merged, neg_t5], dim=-2)]
-        batch.neg_pooled_embeds = [
-            torch.cat([neg_pooled_list[0], neg_pooled_list[1]], dim=-1)
-        ]
-        return batch
+        merged_embeds = [torch.cat([clip_merged, t5], dim=-2)]
+        merged_pooled = [torch.cat([pooled_list[0], pooled_list[1]], dim=-1)]
+        return merged_embeds, merged_pooled
 
 
 class StableDiffusion3Pipeline(ComposedPipelineBase):

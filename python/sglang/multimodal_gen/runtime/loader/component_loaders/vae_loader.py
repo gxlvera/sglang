@@ -7,9 +7,6 @@ from safetensors.torch import load_file as safetensors_load_file
 
 from sglang.multimodal_gen import envs
 from sglang.multimodal_gen.configs.models import ModelConfig
-from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
-    StableDiffusion3PipelineConfig,
-)
 from sglang.multimodal_gen.runtime.loader.component_loaders.component_loader import (
     ComponentLoader,
 )
@@ -84,9 +81,10 @@ class VAELoader(ComponentLoader):
         vae_config = getattr(server_args.pipeline_config, pipeline_vae_config_attr)
         vae_precision = getattr(server_args.pipeline_config, pipeline_vae_precision)
         vae_config.update_model_arch(config)
-        if hasattr(vae_config, "post_init"):
+        post_init_fn = getattr(vae_config, "post_init", None)
+        if callable(post_init_fn):
             # NOTE: some post init logics are only available after updated with config
-            vae_config.post_init()
+            post_init_fn()
 
         should_offload = self.should_offload(server_args)
         target_device = self.target_device(should_offload)
@@ -131,11 +129,10 @@ class VAELoader(ComponentLoader):
 
         safetensors_list = _list_safetensors_files(component_model_path)
 
-        # Use pipeline-specific weight selection strategy (SD3 only).
-        if isinstance(server_args.pipeline_config, StableDiffusion3PipelineConfig):
-            safetensors_list = self._select_vae_weights(
-                safetensors_list, component_model_path, server_args.pipeline_config
-            )
+        # Use pipeline-specific weight selection strategy if configured.
+        safetensors_list = self._select_vae_weights(
+            safetensors_list, component_model_path, server_args.pipeline_config
+        )
 
         assert (
             len(safetensors_list) == 1
@@ -170,8 +167,8 @@ class VAELoader(ComponentLoader):
         # Check if pipeline has specific VAE weight selection strategy
         if (
             pipeline_config.vae_precision is not None
-            and pipeline_config.use_precision_specific_weights
-            and pipeline_config.vae_model_name is not None
+            and getattr(pipeline_config, "use_precision_specific_weights", False)
+            and getattr(pipeline_config, "vae_model_name", None) is not None
         ):
             precision = pipeline_config.vae_precision
             base_name = pipeline_config.vae_model_name
