@@ -98,6 +98,7 @@ class SD3Transformer2DModel(CachableDiT):
         pooled_projections: torch.Tensor | None = None,
         timestep: torch.LongTensor | None = None,
         block_controlnet_hidden_states: list | None = None,
+        guidance: torch.Tensor | None = None,
         joint_attention_kwargs: dict[str, Any] | None = None,
         skip_layers: list[int] | None = None,
     ) -> torch.Tensor:
