@@ -111,4 +111,3 @@ class T5Config(TextEncoderConfig):
             help="Parallel folding mode for T5",
         )
         return parser
-
