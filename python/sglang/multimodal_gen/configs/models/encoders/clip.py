@@ -93,19 +93,6 @@ class CLIPTextConfig(TextEncoderConfig):
 
 
 @dataclass
-class CLIPTextConfigForSD3(CLIPTextConfig):
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        # SD3 CLIP encoders use fixed 77-token context.
-        self.tokenizer_kwargs.update(
-            {
-                "max_length": self.arch_config.text_len,
-                "padding": "max_length",
-            }
-        )
-
-
-@dataclass
 class CLIPVisionConfig(ImageEncoderConfig):
     arch_config: ImageEncoderArchConfig = field(default_factory=CLIPVisionArchConfig)
 
