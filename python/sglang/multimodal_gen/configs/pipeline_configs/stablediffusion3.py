@@ -8,10 +8,15 @@ import torch
 
 from sglang.multimodal_gen.configs.models import DiTConfig, EncoderConfig, VAEConfig
 from sglang.multimodal_gen.configs.models.dits import StableDiffusion3TransformerConfig
-from sglang.multimodal_gen.configs.models.encoders import (
-    BaseEncoderOutput,
-    CLIPTextConfigForSD3,
-    T5ConfigForSD3,
+from sglang.multimodal_gen.configs.models.encoders import BaseEncoderOutput
+from sglang.multimodal_gen.configs.models.encoders.base import TextEncoderArchConfig
+from sglang.multimodal_gen.configs.models.encoders.clip import (
+    CLIPTextArchConfig,
+    CLIPTextConfig,
+)
+from sglang.multimodal_gen.configs.models.encoders.t5 import (
+    T5ArchConfig,
+    T5Config,
 )
 from sglang.multimodal_gen.configs.models.vaes.stablediffusion3 import (
     StableDiffusion3VAEConfig,
@@ -37,6 +42,35 @@ def t5_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tenso
 
 
 @dataclass
+class SD3CLIPTextArchConfig(CLIPTextArchConfig):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.tokenizer_kwargs.update(
+            {
+                "max_length": self.text_len,
+                "padding": "max_length",
+            }
+        )
+
+
+@dataclass
+class SD3CLIPTextConfig(CLIPTextConfig):
+    arch_config: TextEncoderArchConfig = field(default_factory=SD3CLIPTextArchConfig)
+
+
+@dataclass
+class SD3T5ArchConfig(T5ArchConfig):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.tokenizer_kwargs.update({"max_length": 256})
+
+
+@dataclass
+class SD3T5Config(T5Config):
+    arch_config: TextEncoderArchConfig = field(default_factory=SD3T5ArchConfig)
+
+
+@dataclass
 class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
     """Configuration for SD3 image generation pipeline.
 
@@ -52,9 +86,9 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
 
     text_encoder_configs: tuple[EncoderConfig, ...] = field(
         default_factory=lambda: (
-            CLIPTextConfigForSD3(),
-            CLIPTextConfigForSD3(),
-            T5ConfigForSD3(),
+            SD3CLIPTextConfig(),
+            SD3CLIPTextConfig(),
+            SD3T5Config(),
         )
     )
 
@@ -87,8 +121,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
     vae_model_name: str = "diffusion_pytorch_model"
 
     def __post_init__(self) -> None:
-        super().__post_init__()
-
         configs = list(self.text_encoder_configs)
         configs[0].update_model_arch({"_class_name": "CLIPTextModelWithProjection"})
         configs[1].update_model_arch({"_class_name": "CLIPTextModelWithProjection"})
