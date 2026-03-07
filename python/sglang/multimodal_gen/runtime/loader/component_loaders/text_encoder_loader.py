@@ -179,7 +179,8 @@ class TextEncoderLoader(ComponentLoader):
         model_config = get_diffusers_component_config(
             component_path=component_model_path
         )
-
+        
+        # TODO(mick): had to throw an exception for different text-encoder arch
         encoder_index = self._extract_encoder_index(component_name)
         num_encoder_configs = len(server_args.pipeline_config.text_encoder_configs)
         num_encoder_precisions = len(
