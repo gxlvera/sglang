@@ -80,7 +80,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
 
     task_type: ModelTaskType = ModelTaskType.T2I
 
-    # Model configurations
     dit_config: DiTConfig = field(default_factory=StableDiffusion3TransformerConfig)
     vae_config: VAEConfig = field(default_factory=StableDiffusion3VAEConfig)
 
