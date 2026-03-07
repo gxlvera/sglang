@@ -113,7 +113,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         )
     )
 
-    # SD3 specific parameters
     should_use_guidance: bool = False
     guidance_scale: float = 7.0
     use_precision_specific_weights: bool = True
