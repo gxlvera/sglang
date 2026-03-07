@@ -185,15 +185,22 @@ class TextEncoderLoader(ComponentLoader):
         num_encoder_precisions = len(
             server_args.pipeline_config.text_encoder_precisions
         )
-        if encoder_index >= num_encoder_configs:
+        if (
+            encoder_index >= num_encoder_configs
+            or encoder_index >= num_encoder_precisions
+        ):
+            missing_targets: list[str] = []
+            if encoder_index >= num_encoder_configs:
+                missing_targets.append(
+                    f"{num_encoder_configs} text_encoder_configs are provided"
+                )
+            if encoder_index >= num_encoder_precisions:
+                missing_targets.append(
+                    f"{num_encoder_precisions} text_encoder_precisions are provided"
+                )
             raise IndexError(
                 f"Component '{component_name}' resolved to encoder index {encoder_index}, "
-                f"but only {num_encoder_configs} text_encoder_configs are provided."
-            )
-        if encoder_index >= num_encoder_precisions:
-            raise IndexError(
-                f"Component '{component_name}' resolved to encoder index {encoder_index}, "
-                f"but only {num_encoder_precisions} text_encoder_precisions are provided."
+                f"but only {' and '.join(missing_targets)}."
             )
 
         encoder_config = server_args.pipeline_config.text_encoder_configs[encoder_index]
