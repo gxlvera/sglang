@@ -29,6 +29,9 @@ from sglang.multimodal_gen.runtime.distributed.parallel_state import (
     get_ulysses_parallel_world_size,
 )
 from sglang.multimodal_gen.runtime.entrypoints.utils import save_outputs
+from sglang.multimodal_gen.runtime.entrypoints.post_training.io_struct import (
+    UpdateWeightFromTensorReqInput,
+)
 from sglang.multimodal_gen.runtime.loader.weight_utils import compute_weights_checksum
 from sglang.multimodal_gen.runtime.loader.weights_updater import (
     WeightsUpdater,
@@ -57,6 +60,7 @@ from sglang.multimodal_gen.runtime.utils.perf_logger import (
     PerformanceLogger,
     capture_memory_snapshot,
 )
+from sglang.srt.utils import MultiprocessingSerializer
 
 logger = init_logger(__name__)
 
@@ -416,6 +420,42 @@ class GPUWorker:
             self.server_args.model_path = model_path
             self.pipeline.model_path = model_path
         return success, message
+
+    def update_weights_from_tensor(
+        self,
+        req: UpdateWeightFromTensorReqInput,
+    ) -> tuple[bool, str]:
+        """Update model weights from serialized tensor payloads."""
+        if not self.pipeline:
+            return False, "Pipeline is not initialized"
+
+        payloads = req.serialized_named_tensors
+        if not payloads:
+            return False, "serialized_named_tensors is required"
+
+        tp_world_size = get_tp_world_size()
+        if len(payloads) not in (1, tp_world_size):
+            return (
+                False,
+                "serialized_named_tensors size must be 1 or tp_size "
+                f"({tp_world_size}), got {len(payloads)}",
+            )
+
+        payload_idx = get_tp_rank() if len(payloads) == tp_world_size else 0
+        try:
+            named_tensors = MultiprocessingSerializer.deserialize(payloads[payload_idx])
+        except Exception as e:
+            return False, f"Failed to deserialize serialized_named_tensors: {e}"
+
+        updater = WeightsUpdater(self.pipeline)
+        if not hasattr(updater, "update_weights_from_tensor"):
+            return False, "update_weights_from_tensor is not implemented in WeightsUpdater"
+
+        return updater.update_weights_from_tensor(
+            named_tensors=named_tensors,
+            load_format=req.load_format,
+            target_modules=req.target_modules,
+        )
 
     def get_weights_checksum(
         self, module_names: list[str] | None = None
