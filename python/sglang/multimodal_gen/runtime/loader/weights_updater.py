@@ -58,6 +58,10 @@ from sglang.multimodal_gen.runtime.pipelines.diffusers_pipeline import Diffusers
 from sglang.multimodal_gen.runtime.utils.hf_diffusers_utils import maybe_download_model
 from sglang.multimodal_gen.runtime.utils.layerwise_offload import OffloadableDiTMixin
 from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
+from sglang.srt.weight_sync.tensor_bucket import (
+    FlattenedTensorBucket,
+    FlattenedTensorMetadata,
+)
 
 logger = init_logger(__name__)
 
@@ -419,34 +423,23 @@ class WeightsUpdater:
         if not isinstance(metadata, list):
             raise ValueError("flattened_bucket 'metadata' must be a list.")
 
-        reconstructed: list[tuple[str, torch.Tensor]] = []
-        for item in metadata:
-            if hasattr(item, "name"):
-                name = item.name
-                shape = item.shape
-                dtype = item.dtype
-                start_idx = item.start_idx
-                end_idx = item.end_idx
-            elif isinstance(item, dict):
-                name = item["name"]
-                shape = item["shape"]
-                dtype = item["dtype"]
-                start_idx = item["start_idx"]
-                end_idx = item["end_idx"]
-            else:
-                raise ValueError(
-                    "Each flattened_bucket metadata item must be an object "
-                    "with fields (name, shape, dtype, start_idx, end_idx) "
-                    "or a dict containing those keys."
-                )
-
-            dtype = self._normalize_torch_dtype(dtype)
-            tensor = (
-                flattened_tensor[start_idx:end_idx].view(dtype).reshape(torch.Size(shape))
+        converted_metadata: list[FlattenedTensorMetadata] = []
+        for meta in metadata:
+            converted_meta = FlattenedTensorMetadata(
+                name=meta.name,
+                shape=torch.Size(meta.shape),
+                dtype=self._normalize_torch_dtype(meta.dtype),
+                start_idx=int(meta.start_idx),
+                end_idx=int(meta.end_idx),
+                numel=int(meta.numel),
             )
-            reconstructed.append((name, tensor))
+            converted_metadata.append(converted_meta)
 
-        return iter(reconstructed)
+        bucket = FlattenedTensorBucket(
+            flattened_tensor=flattened_tensor,
+            metadata=converted_metadata,
+        )
+        return bucket.reconstruct_tensors()
 
     def _normalize_torch_dtype(self, dtype: Any) -> torch.dtype:
         if isinstance(dtype, torch.dtype):

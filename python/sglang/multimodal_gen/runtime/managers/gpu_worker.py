@@ -448,8 +448,6 @@ class GPUWorker:
             return False, f"Failed to deserialize serialized_named_tensors: {e}"
 
         updater = WeightsUpdater(self.pipeline)
-        if not hasattr(updater, "update_weights_from_tensor"):
-            return False, "update_weights_from_tensor is not implemented in WeightsUpdater"
 
         return updater.update_weights_from_tensor(
             named_tensors=named_tensors,
