@@ -61,6 +61,7 @@ from sglang.multimodal_gen.runtime.utils.perf_logger import (
     capture_memory_snapshot,
 )
 from sglang.srt.utils import MultiprocessingSerializer
+from sglang.srt.utils.network import NetworkAddress
 
 logger = init_logger(__name__)
 
@@ -110,7 +111,9 @@ class GPUWorker:
             ring_degree=self.server_args.ring_degree,
             sp_size=self.server_args.sp_degree,
             dp_size=self.server_args.dp_size,
-            distributed_init_method=f"tcp://127.0.0.1:{self.master_port}",
+            distributed_init_method=NetworkAddress(
+                "127.0.0.1", self.master_port
+            ).to_tcp(),
             dist_timeout=self.server_args.dist_timeout,
         )
 
