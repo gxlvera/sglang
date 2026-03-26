@@ -594,7 +594,6 @@ class CLIPTextModelWithProjection(CLIPTextModel):
     """
     CLIP text encoder with projection head.
 
-    This mirrors transformers' CLIPTextModelWithProjection behavior for SD3:
     text_embeds = text_projection(pooler_output)
     """
 
