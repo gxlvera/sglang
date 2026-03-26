@@ -257,6 +257,8 @@ class TextEncodingStage(PipelineStage):
             if is_flux_t5:
                 attention_mask = torch.ones(input_ids.shape[:2], device=target_device)
             else:
+                # Delegate attention mask policy to pipeline configs,
+                # so stage code stays generic and avoids model-specific branching.
                 attention_mask = server_args.pipeline_config.get_encoder_attention_mask(
                     i, text_inputs, target_device
                 )
