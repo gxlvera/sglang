@@ -189,16 +189,13 @@ class TextEncodingStage(PipelineStage):
             indices = [encoder_index]
         else:
             indices = list(encoder_index)
-        # validate range
+        # Validate indices are within range
         num_encoders = len(self.text_encoders)
         for idx in indices:
             if idx < 0 or idx >= num_encoders:
                 raise IndexError(
                     f"encoder index {idx} out of range [0, {num_encoders - 1}]"
                 )
-
-        # Validate indices are within range
-        num_encoders = len(self.text_encoders)
 
         # Normalize input to list[str]
         assert isinstance(text, str | list)
@@ -280,6 +277,7 @@ class TextEncodingStage(PipelineStage):
             pooled = server_args.pipeline_config.extract_pooled_output(i, outputs)
             if pooled is not None:
                 pooled_embeds_list.append(pooled)
+            
             if return_attention_mask:
                 attn_masks_list.append(attention_mask)
 
