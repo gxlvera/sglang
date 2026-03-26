@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Stable Diffusion 3 pipeline configuration."""
 
+import os
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -115,8 +116,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
 
     should_use_guidance: bool = False
     guidance_scale: float = 7.0
-    use_precision_specific_weights: bool = True
-    vae_model_name: str = "diffusion_pytorch_model"
 
     def __post_init__(self) -> None:
         configs = list(self.text_encoder_configs)
@@ -134,6 +133,26 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         if encoder_index <= 1:
             return encoder_outputs.pooler_output
         return None
+
+    def select_vae_weight_files(
+        self,
+        safetensors_list: list[str],
+        component_model_path: str,
+        component_name: str,
+    ) -> list[str]:
+        """Prefer SD3 precision-specific VAE checkpoints when available."""
+        if component_name not in ("vae", "video_vae"):
+            return safetensors_list
+
+        base_name = "diffusion_pytorch_model"
+        if self.vae_precision == "fp16":
+            fp16_path = os.path.join(
+                str(component_model_path), f"{base_name}.fp16.safetensors"
+            )
+            return [fp16_path] if os.path.exists(fp16_path) else safetensors_list
+
+        full_path = os.path.join(str(component_model_path), f"{base_name}.safetensors")
+        return [full_path] if os.path.exists(full_path) else safetensors_list
 
     def get_pos_prompt_embeds(self, batch):
         return batch.prompt_embeds[0]
