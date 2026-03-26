@@ -185,8 +185,6 @@ class PipelineConfig:
     vae_precision: str = "fp32"
     vae_tiling: bool = True
     vae_sp: bool = True
-    use_precision_specific_weights: bool = False
-    vae_model_name: str | None = None
 
     # Image encoder configuration
     image_encoder_config: EncoderConfig = field(default_factory=EncoderConfig)
@@ -393,6 +391,15 @@ class PipelineConfig:
 
     def post_decoding(self, frames, server_args):
         return frames
+
+    def select_vae_weight_files(
+        self,
+        safetensors_list: list[str],
+        component_model_path: str,  # noqa: ARG002
+        component_name: str,  # noqa: ARG002
+    ) -> list[str]:
+        """Select VAE weight file candidates for this pipeline."""
+        return safetensors_list
 
     def get_encoder_attention_mask(self, encoder_index, text_inputs, device):
         """Return the attention mask for a given text encoder."""
