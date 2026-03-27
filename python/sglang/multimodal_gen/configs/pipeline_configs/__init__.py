@@ -15,6 +15,11 @@ from sglang.multimodal_gen.configs.pipeline_configs.flux import (
 from sglang.multimodal_gen.configs.pipeline_configs.flux_finetuned import (
     Flux2FinetunedPipelineConfig,
 )
+from sglang.multimodal_gen.configs.pipeline_configs.helios import (
+    HeliosDistilledConfig,
+    HeliosMidConfig,
+    HeliosT2VConfig,
+)
 from sglang.multimodal_gen.configs.pipeline_configs.hunyuan import (
     FastHunyuanConfig,
     HunyuanConfig,
@@ -27,6 +32,7 @@ from sglang.multimodal_gen.configs.pipeline_configs.mova import MOVAPipelineConf
 from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
     StableDiffusion3PipelineConfig,
 )
+from sglang.multimodal_gen.configs.pipeline_configs.sana import SanaPipelineConfig
 from sglang.multimodal_gen.configs.pipeline_configs.wan import (
     SelfForcingWanT2V480PConfig,
     WanI2V480PConfig,
@@ -38,6 +44,9 @@ from sglang.multimodal_gen.configs.pipeline_configs.zimage import ZImagePipeline
 
 __all__ = [
     "DiffusersGenericPipelineConfig",
+    "HeliosDistilledConfig",
+    "HeliosMidConfig",
+    "HeliosT2VConfig",
     "HunyuanConfig",
     "FastHunyuanConfig",
     "Hunyuan3D2PipelineConfig",
@@ -46,6 +55,7 @@ __all__ = [
     "Flux2KleinPipelineConfig",
     "Flux2FinetunedPipelineConfig",
     "PipelineConfig",
+    "SanaPipelineConfig",
     "SlidingTileAttnConfig",
     "MOVAPipelineConfig",
     "StableDiffusion3PipelineConfig",
