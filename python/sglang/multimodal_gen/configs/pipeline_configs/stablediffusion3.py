@@ -124,9 +124,10 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         configs[2].update_model_arch({"_class_name": "T5EncoderModel"})
         self.text_encoder_configs = tuple(configs)
 
-    def get_encoder_attention_mask(self, encoder_index, text_inputs, device):
-        """SD3 does not pass attention masks to its text encoders."""
-        return None
+    def tokenize_prompt(self, prompt: list[str], tokenizer, tok_kwargs) -> dict:
+        text_inputs = tokenizer(prompt, **tok_kwargs)
+        text_inputs["attention_mask"] = None
+        return text_inputs
 
     def extract_pooled_output(self, encoder_index, encoder_outputs):
         """SD3 CLIP encoders (indices 0, 1) produce pooled outputs."""

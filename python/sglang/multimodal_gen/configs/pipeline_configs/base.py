@@ -401,10 +401,6 @@ class PipelineConfig:
         """Select VAE weight file candidates for this pipeline."""
         return safetensors_list
 
-    def get_encoder_attention_mask(self, encoder_index, text_inputs, device):
-        """Return the attention mask for a given text encoder."""
-        return text_inputs.get("attention_mask")
-
     def extract_pooled_output(self, encoder_index, encoder_outputs):
         """Extract an optional pooled embedding from encoder outputs."""
         return None
