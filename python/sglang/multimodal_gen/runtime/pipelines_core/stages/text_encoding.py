@@ -189,13 +189,16 @@ class TextEncodingStage(PipelineStage):
             indices = [encoder_index]
         else:
             indices = list(encoder_index)
-        # Validate indices are within range
+        # validate range
         num_encoders = len(self.text_encoders)
         for idx in indices:
             if idx < 0 or idx >= num_encoders:
                 raise IndexError(
                     f"encoder index {idx} out of range [0, {num_encoders - 1}]"
                 )
+
+        # Validate indices are within range
+        num_encoders = len(self.text_encoders)
 
         # Normalize input to list[str]
         assert isinstance(text, str | list)
