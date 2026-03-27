@@ -129,12 +129,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         text_inputs["attention_mask"] = None
         return text_inputs
 
-    def extract_pooled_output(self, encoder_index, encoder_outputs):
-        """SD3 CLIP encoders (indices 0, 1) produce pooled outputs."""
-        if encoder_index <= 1:
-            return encoder_outputs.pooler_output
-        return None
-
     def select_vae_weight_files(
         self,
         safetensors_list: list[str],

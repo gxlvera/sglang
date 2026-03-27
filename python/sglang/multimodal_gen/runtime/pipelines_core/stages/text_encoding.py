@@ -258,7 +258,6 @@ class TextEncodingStage(PipelineStage):
                 attention_mask = torch.ones(input_ids.shape[:2], device=target_device)
             else:
                 attention_mask = text_inputs["attention_mask"]
-                logger.info("TextEncodingStage attention_mask=%s", attention_mask)
             with set_forward_context(current_timestep=0, attn_metadata=None):
                 outputs: BaseEncoderOutput = text_encoder(
                     input_ids=input_ids,
@@ -271,11 +270,14 @@ class TextEncodingStage(PipelineStage):
                 prompt_embeds = prompt_embeds.to(dtype=dtype)
 
             embeds_list.append(prompt_embeds)
-
-            # Collect pooled outputs via config protocol
-            pooled = server_args.pipeline_config.extract_pooled_output(i, outputs)
-            if pooled is not None:
-                pooled_embeds_list.append(pooled)
+            is_sd3 = (
+                server_args.pipeline_config.__class__.__name__
+                == "StableDiffusion3PipelineConfig"
+            )
+            if is_flux_v1:
+                pooled_embeds_list.append(outputs.pooler_output)
+            elif is_sd3 and i <= 1:
+                pooled_embeds_list.append(outputs.pooler_output)
             
             if return_attention_mask:
                 attn_masks_list.append(attention_mask)

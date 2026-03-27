@@ -401,10 +401,6 @@ class PipelineConfig:
         """Select VAE weight file candidates for this pipeline."""
         return safetensors_list
 
-    def extract_pooled_output(self, encoder_index, encoder_outputs):
-        """Extract an optional pooled embedding from encoder outputs."""
-        return None
-
     def prepare_pos_cond_kwargs(self, batch, device, rotary_emb, dtype):
         return {}
 
