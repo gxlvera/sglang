@@ -6,10 +6,10 @@ import torch.nn as nn
 from safetensors.torch import load_file as safetensors_load_file
 
 from sglang.multimodal_gen import envs
+from sglang.multimodal_gen.configs.models import ModelConfig
 from sglang.multimodal_gen.configs.pipeline_configs.stablediffusion3 import (
     select_sd3_vae_weight_files,
 )
-from sglang.multimodal_gen.configs.models import ModelConfig
 from sglang.multimodal_gen.runtime.loader.component_loaders.component_loader import (
     ComponentLoader,
 )
@@ -138,7 +138,9 @@ class VAELoader(ComponentLoader):
                 safetensors_list=safetensors_list,
                 component_model_path=component_model_path,
                 component_name=component_name,
-                vae_precision=getattr(server_args.pipeline_config, "vae_precision", "fp32"),
+                vae_precision=getattr(
+                    server_args.pipeline_config, "vae_precision", "fp32"
+                ),
             )
 
         assert (
