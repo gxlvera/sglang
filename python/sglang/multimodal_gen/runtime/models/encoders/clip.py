@@ -592,9 +592,7 @@ class CLIPTextModel(TextEncoder):
 
 class CLIPTextModelWithProjection(CLIPTextModel):
     """
-    CLIP text encoder with projection head.
-
-    text_embeds = text_projection(pooler_output)
+    CLIP text encoder with projection head for pooled_output.
     """
 
     def __init__(
