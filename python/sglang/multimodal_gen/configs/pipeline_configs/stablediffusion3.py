@@ -42,6 +42,28 @@ def t5_postprocess_text(outputs: BaseEncoderOutput, _text_inputs) -> torch.Tenso
     return outputs.last_hidden_state
 
 
+def select_sd3_vae_weight_files(
+    safetensors_list: list[str],
+    component_model_path: str,
+    component_name: str,
+    vae_precision: str,
+) -> list[str]:
+    """Select SD3 VAE checkpoint file candidates with minimal policy."""
+    if component_name not in ("vae", "video_vae"):
+        return safetensors_list
+
+    base_name = "diffusion_pytorch_model"
+    if vae_precision == "fp16":
+        fp16_path = os.path.join(component_model_path, f"{base_name}.fp16.safetensors")
+        if os.path.exists(fp16_path):
+            return [fp16_path]
+
+    full_path = os.path.join(component_model_path, f"{base_name}.safetensors")
+    if os.path.exists(full_path):
+        return [full_path]
+    return safetensors_list
+
+
 @dataclass
 class SD3CLIPTextArchConfig(CLIPTextArchConfig):
     def __post_init__(self) -> None:
@@ -128,26 +150,6 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         text_inputs = tokenizer(prompt, **tok_kwargs)
         text_inputs["attention_mask"] = None
         return text_inputs
-
-    def select_vae_weight_files(
-        self,
-        safetensors_list: list[str],
-        component_model_path: str,
-        component_name: str,
-    ) -> list[str]:
-        """Prefer SD3 precision-specific VAE checkpoints when available."""
-        if component_name not in ("vae", "video_vae"):
-            return safetensors_list
-
-        base_name = "diffusion_pytorch_model"
-        if self.vae_precision == "fp16":
-            fp16_path = os.path.join(
-                str(component_model_path), f"{base_name}.fp16.safetensors"
-            )
-            return [fp16_path] if os.path.exists(fp16_path) else safetensors_list
-
-        full_path = os.path.join(str(component_model_path), f"{base_name}.safetensors")
-        return [full_path] if os.path.exists(full_path) else safetensors_list
 
     def get_pos_prompt_embeds(self, batch):
         return batch.prompt_embeds[0]

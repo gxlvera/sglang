@@ -392,15 +392,6 @@ class PipelineConfig:
     def post_decoding(self, frames, server_args):
         return frames
 
-    def select_vae_weight_files(
-        self,
-        safetensors_list: list[str],
-        component_model_path: str,  # noqa: ARG002
-        component_name: str,  # noqa: ARG002
-    ) -> list[str]:
-        """Select VAE weight file candidates for this pipeline."""
-        return safetensors_list
-
     def prepare_pos_cond_kwargs(self, batch, device, rotary_emb, dtype):
         return {}
 
