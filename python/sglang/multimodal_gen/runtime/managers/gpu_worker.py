@@ -61,6 +61,8 @@ from sglang.multimodal_gen.runtime.utils.perf_logger import (
     capture_memory_snapshot,
 )
 from sglang.srt.utils import MultiprocessingSerializer
+from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
+
 
 logger = init_logger(__name__)
 
@@ -442,18 +444,21 @@ class GPUWorker:
             )
 
         payload_idx = get_tp_rank() if len(payloads) == tp_world_size else 0
+
+        monkey_patch_torch_reductions()
         try:
             named_tensors = MultiprocessingSerializer.deserialize(payloads[payload_idx])
         except Exception as e:
             return False, f"Failed to deserialize serialized_named_tensors: {e}"
 
         updater = WeightsUpdater(self.pipeline)
-
-        return updater.update_weights_from_tensor(
+        
+        success, message = updater.update_weights_from_tensor(
             named_tensors=named_tensors,
             load_format=req.load_format,
             target_modules=req.target_modules,
         )
+        return success, message
 
     def get_weights_checksum(
         self, module_names: list[str] | None = None
@@ -475,6 +480,7 @@ class GPUWorker:
                 iter_materialized_weights(module)
             )
         return checksums
+
 
 
 OOM_MSG = f"""
