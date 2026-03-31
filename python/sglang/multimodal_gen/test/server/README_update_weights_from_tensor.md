@@ -13,10 +13,6 @@ This document describes the tensor-based in-place weight update flow for diffusi
 - `target_modules: Optional[List[str]]` (for example: `["transformer"]`, `["transformer", "vae"]`)
 - `weight_version: Optional[str]`
 
-Notes:
-- `flush_cache` is intentionally not part of the tensor request.
-- Response shape follows:
-  - `{"success": bool, "message": str}`
 
 ## TP Payload Rules
 
