@@ -22,6 +22,7 @@ from sglang.multimodal_gen.runtime.utils.logging_utils import init_logger
 logger = init_logger(__name__)
 
 _UPDATE_WEIGHTS_FROM_DISK_TEST_FILE = "test_update_weights_from_disk.py"
+_UPDATE_WEIGHTS_FROM_TENSOR_TEST_FILE = "test_update_weights_from_tensor.py"
 _UPDATE_WEIGHTS_MODEL_PAIR_ENV = "SGLANG_MMGEN_UPDATE_WEIGHTS_PAIR"
 _UPDATE_WEIGHTS_MODEL_PAIR_IDS = (
     "FLUX.2-klein-base-4B",
@@ -43,6 +44,7 @@ SUITES = {
         # cli test
         "../cli/test_generate_t2i_perf.py",
         "test_update_weights_from_disk.py",
+        "test_update_weights_from_tensor.py",
         # add new 1-gpu test files here
     ],
     "2-gpu": [
@@ -254,7 +256,10 @@ def _is_in_ci() -> bool:
 def _maybe_pin_update_weights_model_pair(suite_files_rel: list[str]) -> None:
     if not _is_in_ci():
         return
-    if _UPDATE_WEIGHTS_FROM_DISK_TEST_FILE not in suite_files_rel:
+    if (
+        _UPDATE_WEIGHTS_FROM_DISK_TEST_FILE not in suite_files_rel
+        and _UPDATE_WEIGHTS_FROM_TENSOR_TEST_FILE not in suite_files_rel
+    ):
         return
     if os.environ.get(_UPDATE_WEIGHTS_MODEL_PAIR_ENV):
         print(
