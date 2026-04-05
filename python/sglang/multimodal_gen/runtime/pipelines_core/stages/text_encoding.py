@@ -281,7 +281,7 @@ class TextEncodingStage(PipelineStage):
                 pooled_embeds_list.append(outputs.pooler_output)
             elif is_sd3 and i <= 1:
                 pooled_embeds_list.append(outputs.pooler_output)
-            
+
             if return_attention_mask:
                 attn_masks_list.append(attention_mask)
 
