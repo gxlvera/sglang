@@ -813,8 +813,22 @@ def _register_configs():
     register_configs(
         sampling_param_cls=StableDiffusion3SamplingParams,
         pipeline_config_cls=StableDiffusion3PipelineConfig,
-        hf_model_paths=["stabilityai/stable-diffusion-3-medium-diffusers"],
-        model_detectors=[lambda hf_id: "stable-diffusion-3" in hf_id.lower()],
+        hf_model_paths=[
+            "stabilityai/stable-diffusion-3-medium",
+            "stabilityai/stable-diffusion-3-medium-diffusers",
+            "stabilityai/stable-diffusion-3.5-medium",
+            "stabilityai/stable-diffusion-3.5-medium-diffusers",
+            "stabilityai/stable-diffusion-3.5-large",
+            "stabilityai/stable-diffusion-3.5-large-diffusers",
+        ],
+        model_detectors=[
+            lambda hf_id: "stable-diffusion-3-medium" in hf_id.lower()
+            or "stable-diffusion-3.5-medium" in hf_id.lower()
+            or "stable-diffusion-3.5-large" in hf_id.lower()
+            or "sd3-medium" in hf_id.lower()
+            or "sd3.5-medium" in hf_id.lower()
+            or "sd3.5-large" in hf_id.lower()
+        ],
     )
 
     register_configs(
