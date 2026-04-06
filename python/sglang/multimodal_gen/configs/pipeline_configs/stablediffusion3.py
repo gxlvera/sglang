@@ -25,7 +25,6 @@ from sglang.multimodal_gen.configs.models.vaes.stablediffusion3 import (
 from sglang.multimodal_gen.configs.pipeline_configs.base import (
     ModelTaskType,
     SpatialImagePipelineConfig,
-    preprocess_text,
 )
 
 
@@ -118,11 +117,11 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
         default_factory=lambda: ("fp16", "fp16", "fp32")
     )
 
-    preprocess_text_funcs: tuple[Callable[[str], str], ...] = field(
+    preprocess_text_funcs: tuple[Callable[[str], str] | None, ...] = field(
         default_factory=lambda: (
-            preprocess_text,
-            preprocess_text,
-            preprocess_text,
+            None,
+            None,
+            None,
         )
     )
 
