@@ -8,7 +8,7 @@ from sglang.multimodal_gen.configs.models.dits.base import DiTArchConfig, DiTCon
 
 @dataclass
 class StableDiffusion3TransformerArchConfig(DiTArchConfig):
-    """Architecture configuration for StableDiffusion3 Transformer."""
+    """Architecture configuration for StableDiffusion3 Transformer, applicable to SD3-medium, SD3.5-medium, SD3.5-large."""
 
     sample_size: int = 128
     patch_size: int = 2
