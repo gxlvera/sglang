@@ -222,33 +222,22 @@ class TextEncoderLoader(ComponentLoader):
 
         # TODO(mick): had to throw an exception for different text-encoder arch
         encoder_index = self._extract_encoder_index(component_name)
-        num_encoder_configs = len(server_args.pipeline_config.text_encoder_configs)
-        num_encoder_precisions = len(
+        assert encoder_index < len(
+            server_args.pipeline_config.text_encoder_configs
+        ) and encoder_index < len(
             server_args.pipeline_config.text_encoder_precisions
+        ), (
+            f"Component '{component_name}' resolved to encoder index {encoder_index}, but only "
+            f"{len(server_args.pipeline_config.text_encoder_configs)} text_encoder_configs and "
+            f"{len(server_args.pipeline_config.text_encoder_precisions)} text_encoder_precisions are provided."
         )
-        if (
-            encoder_index >= num_encoder_configs
-            or encoder_index >= num_encoder_precisions
-        ):
-            missing_targets: list[str] = []
-            if encoder_index >= num_encoder_configs:
-                missing_targets.append(
-                    f"{num_encoder_configs} text_encoder_configs are provided"
-                )
-            if encoder_index >= num_encoder_precisions:
-                missing_targets.append(
-                    f"{num_encoder_precisions} text_encoder_precisions are provided"
-                )
-            raise IndexError(
-                f"Component '{component_name}' resolved to encoder index {encoder_index}, "
-                f"but only {' and '.join(missing_targets)}."
-            )
 
         encoder_config = server_args.pipeline_config.text_encoder_configs[encoder_index]
         encoder_config.update_model_arch(model_config)
 
-        for key, value in diffusers_pretrained_config.__dict__.items():
-            setattr(encoder_config.arch_config, key, value)
+        if encoder_index == 0:
+            for key, value in diffusers_pretrained_config.__dict__.items():
+                setattr(encoder_config.arch_config, key, value)
         encoder_dtype = server_args.pipeline_config.text_encoder_precisions[
             encoder_index
         ]
