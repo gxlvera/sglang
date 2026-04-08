@@ -224,13 +224,7 @@ class TextEncoderLoader(ComponentLoader):
         encoder_index = self._extract_encoder_index(component_name)
         assert encoder_index < len(
             server_args.pipeline_config.text_encoder_configs
-        ) and encoder_index < len(
-            server_args.pipeline_config.text_encoder_precisions
-        ), (
-            f"Component '{component_name}' resolved to encoder index {encoder_index}, but only "
-            f"{len(server_args.pipeline_config.text_encoder_configs)} text_encoder_configs and "
-            f"{len(server_args.pipeline_config.text_encoder_precisions)} text_encoder_precisions are provided."
-        )
+        ) and encoder_index < len(server_args.pipeline_config.text_encoder_precisions)
 
         encoder_config = server_args.pipeline_config.text_encoder_configs[encoder_index]
         encoder_config.update_model_arch(model_config)
