@@ -420,6 +420,15 @@ class PipelineConfig:
         """
         return None
 
+    def select_vae_weight_files(
+        self,
+        safetensors_list: list[str],
+        component_model_path: str,
+        component_name: str,
+        vae_precision: str,
+    ) -> list[str]:
+        return safetensors_list
+
     def get_pos_prompt_embeds(self, batch):
         return batch.prompt_embeds
 

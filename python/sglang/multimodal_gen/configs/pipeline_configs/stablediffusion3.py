@@ -151,6 +151,20 @@ class StableDiffusion3PipelineConfig(SpatialImagePipelineConfig):
             return outputs.pooler_output
         return None
 
+    def select_vae_weight_files(
+        self,
+        safetensors_list: list[str],
+        component_model_path: str,
+        component_name: str,
+        vae_precision: str,
+    ) -> list[str]:
+        return select_sd3_vae_weight_files(
+            safetensors_list=safetensors_list,
+            component_model_path=component_model_path,
+            component_name=component_name,
+            vae_precision=vae_precision,
+        )
+
     def tokenize_prompt(self, prompt: list[str], tokenizer, tok_kwargs) -> dict:
         text_inputs = tokenizer(prompt, **tok_kwargs)
         text_inputs["attention_mask"] = None
