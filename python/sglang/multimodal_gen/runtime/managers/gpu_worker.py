@@ -2,6 +2,7 @@
 
 # SPDX-License-Identifier: Apache-2.0
 import gc
+import logging
 import multiprocessing as mp
 import os
 import time
@@ -28,10 +29,10 @@ from sglang.multimodal_gen.runtime.distributed.parallel_state import (
     get_ulysses_parallel_rank,
     get_ulysses_parallel_world_size,
 )
-from sglang.multimodal_gen.runtime.entrypoints.utils import save_outputs
 from sglang.multimodal_gen.runtime.entrypoints.post_training.io_struct import (
     UpdateWeightFromTensorReqInput,
 )
+from sglang.multimodal_gen.runtime.entrypoints.utils import save_outputs
 from sglang.multimodal_gen.runtime.loader.weight_utils import compute_weights_checksum
 from sglang.multimodal_gen.runtime.loader.weights_updater import (
     WeightsUpdater,
@@ -61,8 +62,8 @@ from sglang.multimodal_gen.runtime.utils.perf_logger import (
     capture_memory_snapshot,
 )
 from sglang.srt.utils import MultiprocessingSerializer
+from sglang.srt.utils.network import NetworkAddress
 from sglang.srt.utils.patch_torch import monkey_patch_torch_reductions
-
 
 logger = init_logger(__name__)
 
@@ -112,7 +113,9 @@ class GPUWorker:
             ring_degree=self.server_args.ring_degree,
             sp_size=self.server_args.sp_degree,
             dp_size=self.server_args.dp_size,
-            distributed_init_method=f"tcp://127.0.0.1:{self.master_port}",
+            distributed_init_method=NetworkAddress(
+                "127.0.0.1", self.master_port
+            ).to_tcp(),
             dist_timeout=self.server_args.dist_timeout,
         )
 
@@ -201,7 +204,7 @@ class GPUWorker:
 
         pool_overhead_gb = peak_reserved_gb - peak_allocated_gb
 
-        logger.info(
+        logger.debug(
             f"Peak GPU memory: {peak_reserved_gb:.2f} GB, "
             f"Peak allocated: {peak_allocated_gb:.2f} GB, "
             f"Memory pool overhead: {pool_overhead_gb:.2f} GB ({pool_overhead_gb / peak_reserved_gb * 100:.1f}%), "
@@ -239,6 +242,9 @@ class GPUWorker:
                     metrics=result.metrics,
                     trajectory_timesteps=getattr(result, "trajectory_timesteps", None),
                     trajectory_latents=getattr(result, "trajectory_latents", None),
+                    rollout_trajectory_data=getattr(
+                        result, "rollout_trajectory_data", None
+                    ),
                     noise_pred=getattr(result, "noise_pred", None),
                     trajectory_decoded=getattr(result, "trajectory_decoded", None),
                 )
@@ -252,7 +258,11 @@ class GPUWorker:
                     "after_forward", peak_snapshot
                 )
 
-            if self.rank == 0 and not req.suppress_logs:
+            if (
+                self.rank == 0
+                and not req.suppress_logs
+                and logger.isEnabledFor(logging.DEBUG)
+            ):
                 self.do_mem_analysis(output_batch)
 
             duration_ms = (time.monotonic() - start_time) * 1000
@@ -295,6 +305,19 @@ class GPUWorker:
                 # Avoid logging warmup perf records that share the same request_id.
                 if not req.is_warmup:
                     PerformanceLogger.log_request_summary(metrics=output_batch.metrics)
+
+            # dump per-request perf report to specified file (server mode)
+            if (
+                req.perf_dump_path is not None
+                and not req.is_warmup
+                and output_batch.metrics is not None
+            ):
+                PerformanceLogger.dump_benchmark_report(
+                    file_path=req.perf_dump_path,
+                    metrics=output_batch.metrics,
+                    meta={"model": self.server_args.model_path},
+                    tag="server_perf_dump",
+                )
         except Exception as e:
             logger.error(
                 f"Error executing request {req.request_id}: {e}", exc_info=True
@@ -452,7 +475,7 @@ class GPUWorker:
             return False, f"Failed to deserialize serialized_named_tensors: {e}"
 
         updater = WeightsUpdater(self.pipeline)
-        
+
         success, message = updater.update_weights_from_tensor(
             named_tensors=named_tensors,
             load_format=req.load_format,
@@ -480,7 +503,6 @@ class GPUWorker:
                 iter_materialized_weights(module)
             )
         return checksums
-
 
 
 OOM_MSG = f"""
